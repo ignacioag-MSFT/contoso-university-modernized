@@ -1,12 +1,13 @@
 using System;
 using System.Linq;
 using ContosoUniversity.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace ContosoUniversity.Data
 {
-    public static class DbInitializer
+    public class DbInitializer
     {
-        public static void Initialize(SchoolContext context)
+        public void Initialize(SchoolContext context)
         {
             // Ensure the database is created
             context.Database.EnsureCreated();
