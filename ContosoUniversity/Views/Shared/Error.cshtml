@@ -1,21 +1,16 @@
-@model System.Web.Mvc.HandleErrorInfo
+@model Microsoft.AspNetCore.Mvc.ModelBinding.ModelBindingResult
 
 @{
-    ViewBag.Title = "Error";
+    ViewData["Title"] = "Error";
 }
 
 <h1 class="text-danger">Error.</h1>
 <h2 class="text-danger">An error occurred while processing your request.</h2>
 
-@if (Model != null && HttpContext.Current.IsDebuggingEnabled)
-{
-    <p>
-        <strong>Exception Details:</strong> @Model.Exception.Message
-    </p>
-    <p>
-        <strong>Controller:</strong> @Model.ControllerName
-    </p>
-    <p>
-        <strong>Action:</strong> @Model.ActionName
-    </p>
-}
+<p>
+    <strong>An error occurred while processing your request.</strong>
+</p>
+<p>
+    If you are a developer, please return to the application and correct this error.
+</p>
+

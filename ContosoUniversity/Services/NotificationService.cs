@@ -1,42 +1,44 @@
 using System;
-using System.Messaging;
-using System.Configuration;
+using Azure.Messaging.ServiceBus;
+using ContosoUniversity.Data;
 using ContosoUniversity.Models;
-using Newtonsoft.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace ContosoUniversity.Services
 {
-    public class NotificationService
+    public class NotificationService : IAsyncDisposable
     {
-        private readonly string _queuePath;
-        private readonly MessageQueue _queue;
+        private readonly SchoolContext _context;
+        private readonly ServiceBusSender? _sender;
+        private readonly ILogger<NotificationService> _logger;
 
-        public NotificationService()
+        public NotificationService(
+            SchoolContext context,
+            IConfiguration configuration,
+            ILogger<NotificationService> logger,
+            ServiceBusClient? serviceBusClient = null)
         {
-            // Get queue path from configuration or use default
-            _queuePath = ConfigurationManager.AppSettings["NotificationQueuePath"] ?? @".\Private$\ContosoUniversityNotifications";
-            
-            // Ensure the queue exists
-            if (!MessageQueue.Exists(_queuePath))
+            _context = context;
+            _logger = logger;
+
+            if (serviceBusClient != null)
             {
-                _queue = MessageQueue.Create(_queuePath);
-                _queue.SetPermissions("Everyone", MessageQueueAccessRights.FullControl);
+                var queueName = configuration["AzureServiceBus:QueueName"];
+                if (string.IsNullOrWhiteSpace(queueName))
+                {
+                    throw new InvalidOperationException("AzureServiceBus:QueueName must be configured.");
+                }
+
+                _sender = serviceBusClient.CreateSender(queueName);
             }
-            else
-            {
-                _queue = new MessageQueue(_queuePath);
-            }
-            
-            // Configure queue formatter
-            _queue.Formatter = new XmlMessageFormatter(new Type[] { typeof(string) });
         }
 
-        public void SendNotification(string entityType, string entityId, EntityOperation operation, string userName = null)
+        public void SendNotification(string entityType, string entityId, EntityOperation operation, string? userName = null)
         {
             SendNotification(entityType, entityId, null, operation, userName);
         }
 
-        public void SendNotification(string entityType, string entityId, string entityDisplayName, EntityOperation operation, string userName = null)
+        public void SendNotification(string entityType, string entityId, string? entityDisplayName, EntityOperation operation, string? userName = null)
         {
             try
             {
@@ -51,34 +53,35 @@ namespace ContosoUniversity.Services
                     IsRead = false
                 };
 
-                var jsonMessage = JsonConvert.SerializeObject(notification);
-                var message = new Message(jsonMessage)
-                {
-                    Label = $"{entityType} {operation}",
-                    Priority = MessagePriority.Normal
-                };
+                _context.Notifications.Add(notification);
+                _context.SaveChanges();
 
-                _queue.Send(message);
+                if (_sender != null)
+                {
+                    var message = new ServiceBusMessage(BinaryData.FromObjectAsJson(notification))
+                    {
+                        ContentType = "application/json",
+                        MessageId = notification.Id.ToString(),
+                        Subject = $"{notification.EntityType}.{notification.Operation}"
+                    };
+
+                    _sender.SendMessageAsync(message).GetAwaiter().GetResult();
+                }
             }
             catch (Exception ex)
             {
-                // Log error but don't break the main operation
-                System.Diagnostics.Debug.WriteLine($"Failed to send notification: {ex.Message}");
+                _logger.LogError(ex, "Failed to send notification for {EntityType} {EntityId}", entityType, entityId);
             }
         }
 
-        public Notification ReceiveNotification()
+        public Notification? ReceiveNotification()
         {
             try
             {
-                var message = _queue.Receive(TimeSpan.FromSeconds(1));
-                var jsonContent = message.Body.ToString();
-                return JsonConvert.DeserializeObject<Notification>(jsonContent);
-            }
-            catch (MessageQueueException ex) when (ex.MessageQueueErrorCode == MessageQueueErrorCode.IOTimeout)
-            {
-                // No messages available
-                return null;
+                return _context.Notifications
+                    .AsNoTracking()
+                    .OrderByDescending(n => n.CreatedAt)
+                    .FirstOrDefault();
             }
             catch (Exception ex)
             {
@@ -89,32 +92,43 @@ namespace ContosoUniversity.Services
 
         public void MarkAsRead(int notificationId)
         {
-            // In a real implementation, you might want to store notifications in database as well
-            // for persistence and tracking read status
+            try
+            {
+                var notification = _context.Notifications.Find(notificationId);
+                if (notification != null)
+                {
+                    notification.IsRead = true;
+                    _context.SaveChanges();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to mark notification as read: {ex.Message}");
+            }
         }
 
-        private string GenerateMessage(string entityType, string entityId, string entityDisplayName, EntityOperation operation)
+        private string GenerateMessage(string entityType, string entityId, string? entityDisplayName, EntityOperation operation)
         {
             var displayText = !string.IsNullOrWhiteSpace(entityDisplayName) 
                 ? $"{entityType} '{entityDisplayName}'" 
                 : $"{entityType} (ID: {entityId})";
 
-            switch (operation)
+            return operation switch
             {
-                case EntityOperation.CREATE:
-                    return $"New {displayText} has been created";
-                case EntityOperation.UPDATE:
-                    return $"{displayText} has been updated";
-                case EntityOperation.DELETE:
-                    return $"{displayText} has been deleted";
-                default:
-                    return $"{displayText} operation: {operation}";
-            }
+                EntityOperation.CREATE => $"New {displayText} has been created",
+                EntityOperation.UPDATE => $"{displayText} has been updated",
+                EntityOperation.DELETE => $"{displayText} has been deleted",
+                _ => $"{displayText} operation: {operation}",
+            };
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _queue?.Dispose();
+            if (_sender != null)
+            {
+                await _sender.DisposeAsync();
+            }
         }
     }
 }
+

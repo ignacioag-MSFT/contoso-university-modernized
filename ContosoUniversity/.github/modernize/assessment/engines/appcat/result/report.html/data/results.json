@@ -1,0 +1,191 @@
+results = 
+{
+  "settings": {
+    "components": {
+      "code": false,
+      "binaries": true
+    },
+    "targetId": "Any",
+    "visuals": {
+      "elements": [
+        {
+          "id": "ReportEntries",
+          "displayName": "Folders"
+        },
+        {
+          "id": "ReportEntry",
+          "displayName": "Folder"
+        },
+        {
+          "id": "SummaryReportEntries",
+          "displayName": "folders"
+        }
+      ],
+      "pages": {
+        "projects": {
+          "name": "Folders",
+          "title": "Folders"
+        }
+      }
+    }
+  },
+  "analysisStartTime": "2026-09-04T12:34:01.9151807Z",
+  "analysisEndTime": "2026-09-04T12:34:03.577096Z",
+  "privacyMode": "Restricted",
+  "privacyModeHelpUrl": "https://go.microsoft.com/fwlink/?linkid=2271074",
+  "stats": {
+    "summary": {
+      "projects": 1,
+      "issues": 4,
+      "incidents": 5,
+      "effort": 15
+    },
+    "charts": {
+      "severity": {
+        "Mandatory": 1,
+        "Optional": 3,
+        "Potential": 1,
+        "Information": 0
+      },
+      "category": {
+        "Scale": 1,
+        "Database": 1,
+        "Identity": 1,
+        "Security": 2
+      }
+    }
+  },
+  "projects": [
+    {
+      "path": ".",
+      "startingProject": true,
+      "issues": 4,
+      "storyPoints": 15,
+      "ruleInstances": [
+        {
+          "incidentId": "4acc30d9-0f92-4eac-9726-4f52765e4b9d",
+          "ruleId": "Scale.0001",
+          "projectPath": ".",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "."
+          }
+        },
+        {
+          "incidentId": "70d7121c-f55c-4052-a274-5c3148b54da7",
+          "ruleId": "Database.0002",
+          "projectPath": ".",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "./Web.config"
+          }
+        },
+        {
+          "incidentId": "7212db92-b329-4d1b-be83-249522d6bc9f",
+          "ruleId": "Identity.0002",
+          "projectPath": ".",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "./Web.config"
+          }
+        },
+        {
+          "incidentId": "f8ed367d-cc66-40ad-b3f8-401e4087086c",
+          "ruleId": "Security.0002",
+          "projectPath": ".",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "./Web.config"
+          }
+        },
+        {
+          "incidentId": "443f9c37-f8c8-4f90-a2f3-e15fbb9686a6",
+          "ruleId": "Security.0002",
+          "projectPath": ".",
+          "state": "Active",
+          "location": {
+            "kind": "File",
+            "path": "./Web.config"
+          }
+        }
+      ]
+    }
+  ],
+  "rules": {
+    "Scale.0001": {
+      "id": "Scale.0001",
+      "description": "Static content detected.\n\nYour current approach of serving static content directly might lead to increased costs, performance issues, maintenance challenges (requiring application redeployment for content changes), and security risks.\n\nConsider moving static content to Azure Blob Storage and adding Azure CDN.",
+      "label": "Static content detected",
+      "severity": "Optional",
+      "effort": 3,
+      "links": [
+        {
+          "title": "Azure Blob Storage",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2250574"
+        },
+        {
+          "title": "Azure CDN",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2250392"
+        }
+      ]
+    },
+    "Database.0002": {
+      "id": "Database.0002",
+      "description": "SQL database connection detected.\n\nEnsure the database is available/reachable on Azure.\n\nIf it is not, there are multiple ways you can move your data to Azure:\n    1. Migrate to Azure SQL Database.\n    2. Consider Azure SQL Managed Instance if you need features that are not available in Azure SQL Database and you don\u2019t want to use a VM.\n    3. Migrate your database servers directly to SQL Server on Azure VMs.\n\nTo assess database migration effort, you can use Azure Migrate tool, see the link below.",
+      "label": "SQL database connection detected",
+      "severity": "Potential",
+      "effort": 3,
+      "links": [
+        {
+          "title": "Migrate SQL Server database to Azure",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2251731"
+        },
+        {
+          "title": "Azure SQL Managed Instance",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2251613"
+        },
+        {
+          "title": "Azure Migrate",
+          "url": "https://go.microsoft.com/fwlink/?linkid=2252410"
+        }
+      ]
+    },
+    "Identity.0002": {
+      "id": "Identity.0002",
+      "description": "Your app is using windows authentication which is not supported on Azure App Service, Azure Container Apps and Azure Kubernetes Service.\n\nAzure App Service provides built-in authentication and authorization capabilities, so you can sign in users and access data by writing minimal or no code in your web app.\n\nFollow the link below for more information.\u0022",
+      "label": "Windows authentication detected",
+      "severity": "Mandatory",
+      "effort": 3,
+      "links": [
+        {
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2242883"
+        }
+      ]
+    },
+    "Security.0002": {
+      "id": "Security.0002",
+      "description": "Connection strings without configuration builders detected.  \n\n Keeping connection strings directly in the app is not the best practice and might introduce security risks, increased maintenance, scalability challenges or compliance standards (such as PCI DSS, GDPR, etc.). \n\n Instead, it is recommended to use configuration builders to get secrets from secure sources in Azure environment.",
+      "label": "Connection strings without configuration builders detected",
+      "severity": "Optional",
+      "effort": 3,
+      "links": [
+        {
+          "title": "Configuration builders",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2250915"
+        },
+        {
+          "title": "Storing application secrets",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2250916"
+        },
+        {
+          "title": "Centralized app configuration and security",
+          "url": "https://go.microsoft.com/fwlink/?LinkID=2250733"
+        }
+      ]
+    }
+  }
+}
