@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using ContosoUniversity.Data;
 using ContosoUniversity.Services;
+using Azure.Identity;
+using Microsoft.Extensions.Azure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,27 @@ builder.Services.AddDbContext<SchoolContext>(options =>
 // Add application services
 builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<NotificationService>();
+
+// Add Azure Blob Storage service
+// MIGRATION NOTE: Following Rule 26 (Azure SDK Client Lifetime),
+// register BlobServiceClient as Singleton using Microsoft.Extensions.Azure.
+// This reuses the HTTP pipeline, connection pool, and credential token cache.
+builder.Services.AddAzureClients(clientBuilder =>
+{
+    var storageUri = builder.Configuration["AzureStorage:ServiceUri"];
+    if (string.IsNullOrEmpty(storageUri))
+    {
+        throw new InvalidOperationException(
+            "AzureStorage:ServiceUri must be configured in appsettings.json. " +
+            "Format: https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net");
+    }
+
+    clientBuilder.AddBlobServiceClient(new Uri(storageUri));
+    clientBuilder.UseCredential(new DefaultAzureCredential());
+});
+
+// Register AzureBlobStorageService as Singleton since it holds a BlobServiceClient
+builder.Services.AddSingleton<AzureBlobStorageService>();
 
 var app = builder.Build();
 
