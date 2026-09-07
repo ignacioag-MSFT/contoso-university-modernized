@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Build outputs
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.docstates
+*.userprefs
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+# Test results
+TestResults/
+coverage/
+.nyc_output/
+junit.xml
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Application specific
+appsettings.Development.json
+appsettings.*.json
+local.settings.json
+*.pfx
+*.cert
+secrets/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+README.md
+SETUP_TESTING_GUIDE.md
+TEACHING_MATERIAL_UPLOAD.md
+NOTIFICATION_SYSTEM_README.md
+
+# Node modules (if any frontend build)
+node_modules/
+npm-debug.log
+
+# Logs and runtime files
+logs/
+*.log
+
+# Miscellaneous
+.env
+.env.local
+.editorconfig
+TEACHING_MATERIAL_UPLOAD.md
