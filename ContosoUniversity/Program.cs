@@ -10,9 +10,29 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
-// Add DbContext
+// Add DbContext with support for Azure SQL Database with Managed Identity
+// MIGRATION NOTE: Following Azure SQL Database best practices,
+// we configure connection strings that work with both local development (using Integrated Security)
+// and Azure SQL Database (using Managed Identity via Azure.Identity).
 builder.Services.AddDbContext<SchoolContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    
+    // Configure SQL Server connection options
+    // For Azure SQL Database, the connection string should use "Authentication=Active Directory Default;"
+    // For local development, the connection string can use "Integrated Security=True;"
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        // Enable connection resiliency for transient failures (especially important for Azure SQL)
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null);
+        
+        // Configure for Entity Framework Core best practices
+        sqlOptions.CommandTimeout(30);
+    });
+});
 
 // Add application services
 builder.Services.AddScoped<DbInitializer>();
