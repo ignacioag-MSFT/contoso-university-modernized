@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ContosoUniversity.Data;
 using ContosoUniversity.Services;
 using Azure.Identity;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Azure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,13 @@ builder.Services.AddDbContext<SchoolContext>(options =>
 // Add application services
 builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<NotificationService>();
+
+var serviceBusNamespace = builder.Configuration["AzureServiceBus:FullyQualifiedNamespace"];
+if (!string.IsNullOrWhiteSpace(serviceBusNamespace) && !serviceBusNamespace.Contains("${", StringComparison.Ordinal))
+{
+    builder.Services.AddSingleton(
+        new ServiceBusClient(serviceBusNamespace, new DefaultAzureCredential()));
+}
 
 // Add Azure Blob Storage service
 // MIGRATION NOTE: Following Rule 26 (Azure SDK Client Lifetime),
