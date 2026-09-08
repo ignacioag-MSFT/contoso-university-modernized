@@ -1,38 +1,40 @@
-# Contoso University - .NET 10.2
+# Contoso University - .NET 10
 
-This project is a ASP.NET Core MVC targeting .NET 10.2.
+This project is an ASP.NET Core MVC application targeting .NET 10.
 
 ## Project Overview
 
 ### Framework
-- ASP.NET Core MVC (.NET 10.2)
+- ASP.NET Core MVC (.NET 10)
 
 ### Database Access: Entity Framework
-- Entity Framework Core 3.1.32
+- Entity Framework Core 10.0.0
 
 ### Project Structure
 ```
 ContosoUniversity/
-├── App_Start/              # Application startup configuration
 ├── Controllers/            # MVC Controllers
 ├── Data/                   # Entity Framework context and initializer
 ├── Models/                 # Data models and view models
+├── Services/               # Azure Service Bus and Blob Storage integrations
 ├── Views/                  # Razor views
 ├── Content/                # CSS and other content
 ├── Scripts/                # JavaScript files
 ├── Properties/             # Assembly properties
-├── Global.asax             # Application global events
-├── Web.config              # Configuration file
+├── Program.cs              # ASP.NET Core application startup
+├── appsettings.json        # Application configuration
 └── ContosoUniversity.csproj # SDK-style project with PackageReference
 ```
 
 ## Database Configuration
 
-The application uses SQL Server LocalDB with the following connection string in `Web.config`:
-```xml
-  <connectionStrings>
-    <add name="DefaultConnection" connectionString="Data Source=(LocalDb)\MSSQLLocalDB;Initial Catalog=ContosoUniversityNoAuthEFCore;Integrated Security=True;MultipleActiveResultSets=True" />
-  </connectionStrings>
+The application uses SQL Server LocalDB with the following connection string in `appsettings.json`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Data Source=(LocalDb)\\MSSQLLocalDB;Initial Catalog=ContosoUniversityNoAuthEFCore;Integrated Security=True;MultipleActiveResultSets=True"
+  }
+}
 ```
 
 ## Running the Application
@@ -47,7 +49,7 @@ The application uses SQL Server LocalDB with the following connection string in 
    - Open the project in Visual Studio
    - Restore NuGet packages
    - Build the solution
-   - Run using IIS Express
+   - Run the ASP.NET Core application
 
 ## Features
 

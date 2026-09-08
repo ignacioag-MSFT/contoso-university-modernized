@@ -75,10 +75,7 @@ This feature allows administrators to upload images for teaching materials (text
 
 ### Configuration
 
-The following settings in `Web.config` control file upload limits:
-- `maxRequestLength="10240"` (10MB in KB)
-- `maxAllowedContentLength="10485760"` (10MB in bytes)
-- `executionTimeout="3600"` (1 hour timeout for large uploads)
+The application validates teaching material images before upload and rejects files larger than 5MB. Configure ASP.NET Core hosting request-body limits separately if an environment needs to accept larger multipart requests.
 
 ## Deployment Considerations
 
@@ -86,7 +83,7 @@ The following settings in `Web.config` control file upload limits:
 1. Set `Storage:ServiceUri` or `Storage:StorageAccountName` for the target storage account
 2. Set `Storage:TeachingMaterialsContainerName` if using a non-default container name
 3. Grant the application identity Storage Blob Data Contributor access
-4. Verify the web.config upload limits are appropriate for your hosting environment
+4. Verify ASP.NET Core hosting request-body limits are appropriate for your hosting environment
 
 ### Azure RBAC Permissions
 The application uses `DefaultAzureCredential` and needs Azure RBAC access to Blob Storage:
