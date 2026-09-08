@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using ContosoUniversity.Data;
 using ContosoUniversity.Models.SchoolViewModels;
 
@@ -38,7 +39,8 @@ namespace ContosoUniversity.Controllers
             return View();
         }
 
-        public ActionResult Unauthorized()
+        [ActionName("Unauthorized")]
+        public ActionResult UnauthorizedPage()
         {
             ViewBag.Message = "You don't have permission to access this resource.";
             return View();

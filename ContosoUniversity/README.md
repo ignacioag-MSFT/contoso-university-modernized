@@ -1,11 +1,11 @@
-# Contoso University - .NET Framework 4.8.2
+# Contoso University - .NET 10.2
 
-This project is a ASP.NET MVC 5 targeting .NET Framework 4.8.2.
+This project is a ASP.NET Core MVC targeting .NET 10.2.
 
 ## Project Overview
 
 ### Framework
-- ASP.NET MVC 5 (.NET Framework 4.8.2)
+- ASP.NET Core MVC (.NET 10.2)
 
 ### Database Access: Entity Framework
 - Entity Framework Core 3.1.32
@@ -23,7 +23,7 @@ ContosoUniversity/
 ├── Properties/             # Assembly properties
 ├── Global.asax             # Application global events
 ├── Web.config              # Configuration file
-└── packages.config         # NuGet packages
+└── ContosoUniversity.csproj # SDK-style project with PackageReference
 ```
 
 ## Database Configuration

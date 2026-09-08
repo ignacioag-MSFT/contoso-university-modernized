@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Net;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using ContosoUniversity.Data;
 using ContosoUniversity.Models;
 using ContosoUniversity.Models.SchoolViewModels;
@@ -45,12 +47,12 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             Instructor instructor = db.Instructors.Find(id);
             if (instructor == null)
             {
-                return HttpNotFound();
+                return NotFound();
             }
             return View(instructor);
         }
@@ -67,7 +69,7 @@ namespace ContosoUniversity.Controllers
         // POST: Instructors/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "LastName,FirstMidName,HireDate,OfficeAssignment")] Instructor instructor, string[] selectedCourses)
+        public ActionResult Create([Bind("LastName,FirstMidName,HireDate,OfficeAssignment")] Instructor instructor, string[] selectedCourses)
         {
             if (selectedCourses != null)
             {
@@ -97,7 +99,7 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             Instructor instructor = db.Instructors
                 .Include(i => i.OfficeAssignment)
@@ -108,7 +110,7 @@ namespace ContosoUniversity.Controllers
             PopulateAssignedCourseData(instructor);
             if (instructor == null)
             {
-                return HttpNotFound();
+                return NotFound();
             }
             return View(instructor);
         }
@@ -133,11 +135,11 @@ namespace ContosoUniversity.Controllers
         // POST: Instructors/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int? id, string[] selectedCourses)
+        public async Task<ActionResult> Edit(int? id, string[] selectedCourses)
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             var instructorToUpdate = db.Instructors
                .Include(i => i.OfficeAssignment)
@@ -146,8 +148,7 @@ namespace ContosoUniversity.Controllers
                .Where(i => i.ID == id)
                .Single();
 
-            if (TryUpdateModel(instructorToUpdate, "",
-               new string[] { "LastName", "FirstMidName", "HireDate", "OfficeAssignment" }))
+            if (await TryUpdateModelAsync(instructorToUpdate, "", i => i.LastName, i => i.FirstMidName, i => i.HireDate, i => i.OfficeAssignment))
             {
                 try
                 {
@@ -211,12 +212,12 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             Instructor instructor = db.Instructors.Find(id);
             if (instructor == null)
             {
-                return HttpNotFound();
+                return NotFound();
             }
             return View(instructor);
         }
