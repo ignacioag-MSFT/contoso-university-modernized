@@ -7,7 +7,7 @@ This feature allows administrators to upload images for teaching materials (text
 - **Image Upload**: Upload teaching material images when creating or editing courses
 - **File Validation**: Supports JPG, JPEG, PNG, GIF, and BMP formats
 - **Size Limits**: Maximum file size of 5MB per image
-- **Secure Storage**: Images are stored in `/Uploads/TeachingMaterials/` directory
+- **Secure Storage**: Images are stored in a private Azure Blob Storage container
 - **Automatic Cleanup**: Images are automatically deleted when courses are removed
 - **Unique Filenames**: Each uploaded image gets a unique filename to prevent conflicts
 
@@ -38,22 +38,21 @@ This feature allows administrators to upload images for teaching materials (text
 ## Technical Details
 
 ### File Storage
-- Images are stored in `/Uploads/TeachingMaterials/` directory
+- Images are stored in the Azure Blob Storage container configured by `Storage:TeachingMaterialsContainerName`
 - Filenames follow the pattern: `course_{CourseID}_{GUID}.{extension}`
 - Old images are automatically deleted when replaced
-- **Important**: Uploaded images are excluded from git repository via `.gitignore`
+- **Important**: Uploaded images are stored outside the git repository in Azure Blob Storage
 
 ### Git Repository Management
-- The `/Uploads/TeachingMaterials/` directory structure is preserved in git with a `.gitkeep` file
-- Actual uploaded images are excluded from version control to:
+- Actual uploaded images are not stored in version control:
   - Keep repository size manageable
   - Prevent sensitive content from being committed
-  - Avoid merge conflicts with binary files
-- When deploying to new environments, ensure the upload directory has proper write permissions
+  - Allow different environments to manage their own uploaded content in Azure
+- When deploying to new environments, configure `Storage:ServiceUri` or `Storage:StorageAccountName` and grant the application identity Storage Blob Data Contributor access
 
 ### Database Schema
 - New field: `TeachingMaterialImagePath` (VARCHAR(255)) added to the Course table
-- Stores the relative path to the uploaded image file
+- Stores the Azure blob name for the uploaded image
 
 ### Security
 - File type validation prevents uploading of non-image files
@@ -72,7 +71,7 @@ This feature allows administrators to upload images for teaching materials (text
 
 1. **"File too large" error**: Ensure your image is under 5MB
 2. **"Invalid file type" error**: Only JPG, JPEG, PNG, GIF, and BMP files are supported
-3. **Upload fails**: Check that the `/Uploads/TeachingMaterials/` directory exists and has write permissions
+3. **Upload fails**: Check Azure Blob Storage configuration and verify the application identity has Storage Blob Data Contributor access to the storage account/container
 
 ### Configuration
 
@@ -84,19 +83,21 @@ The following settings in `Web.config` control file upload limits:
 ## Deployment Considerations
 
 ### Initial Setup
-1. Ensure the `/Uploads/TeachingMaterials/` directory exists on the server
-2. Set appropriate write permissions for the application pool identity
-3. Verify the web.config upload limits are appropriate for your hosting environment
+1. Set `Storage:ServiceUri` or `Storage:StorageAccountName` for the target storage account
+2. Set `Storage:TeachingMaterialsContainerName` if using a non-default container name
+3. Grant the application identity Storage Blob Data Contributor access
+4. Verify the web.config upload limits are appropriate for your hosting environment
 
-### File System Permissions
-The application needs write access to the `/Uploads/TeachingMaterials/` directory:
-- **IIS**: Grant `IIS_IUSRS` or application pool identity write permissions
-- **Development**: Ensure the development user has write access
+### Azure RBAC Permissions
+The application uses `DefaultAzureCredential` and needs Azure RBAC access to Blob Storage:
+- **Local development**: sign in with Azure CLI or Visual Studio using an account with Storage Blob Data Contributor access
+- **Azure App Service**: enable managed identity and grant Storage Blob Data Contributor on the storage account or container
+- **Containers**: provide a managed identity/workload identity or other `DefaultAzureCredential`-supported identity
 
 ### Backup Strategy
 Since uploaded images are not in version control, implement a backup strategy:
-- Regular file system backups of the `/Uploads/` directory
-- Consider cloud storage integration for production environments
+- Enable storage account backup, soft delete, versioning, or replication as appropriate
+- Include the storage account/container in disaster recovery plans
 - Document the restore process for disaster recovery
 
 ## Future Enhancements

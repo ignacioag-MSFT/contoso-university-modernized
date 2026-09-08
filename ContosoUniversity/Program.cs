@@ -9,6 +9,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<SchoolContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddSingleton<TeachingMaterialBlobStorageService>();
 
 var app = builder.Build();
 
@@ -27,7 +28,7 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
-foreach (var folder in new[] { "Content", "Scripts", "Uploads" })
+foreach (var folder in new[] { "Content", "Scripts" })
 {
     var path = Path.Combine(app.Environment.ContentRootPath, folder);
     if (Directory.Exists(path))

@@ -5,18 +5,22 @@ using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using ContosoUniversity.Data;
 using ContosoUniversity.Models;
+using ContosoUniversity.Services;
 
 namespace ContosoUniversity.Controllers
 {
     public class CoursesController : BaseController
     {
-        private static string MapAppPath(string appRelativePath)
+        private readonly TeachingMaterialBlobStorageService teachingMaterialBlobStorageService;
+
+        public CoursesController(SchoolContext context, NotificationService notifications, TeachingMaterialBlobStorageService blobStorageService)
+            : base(context, notifications)
         {
-            var relativePath = appRelativePath.TrimStart('~', '/').Replace('/', Path.DirectorySeparatorChar);
-            return Path.Combine(Directory.GetCurrentDirectory(), relativePath);
+            teachingMaterialBlobStorageService = blobStorageService;
         }
 
         // GET: Courses
@@ -51,7 +55,7 @@ namespace ContosoUniversity.Controllers
         // POST: Courses/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind("CourseID,Title,Credits,DepartmentID,TeachingMaterialImagePath")] Course course, IFormFile teachingMaterialImage)
+        public async Task<ActionResult> Create([Bind("CourseID,Title,Credits,DepartmentID,TeachingMaterialImagePath")] Course course, IFormFile teachingMaterialImage)
         {
             if (ModelState.IsValid)
             {
@@ -79,23 +83,11 @@ namespace ContosoUniversity.Controllers
 
                     try
                     {
-                        // Create uploads directory if it doesn't exist
-                        var uploadsPath = MapAppPath("~/Uploads/TeachingMaterials/");
-                        if (!Directory.Exists(uploadsPath))
-                        {
-                            Directory.CreateDirectory(uploadsPath);
-                        }
-
                         // Generate unique filename
                         var fileName = $"course_{course.CourseID}_{Guid.NewGuid()}{fileExtension}";
-                        var filePath = Path.Combine(uploadsPath, fileName);
 
-                        // Save file
-                        using (var stream = System.IO.File.Create(filePath))
-                        {
-                            teachingMaterialImage.CopyTo(stream);
-                        }
-                        course.TeachingMaterialImagePath = $"~/Uploads/TeachingMaterials/{fileName}";
+                        // Save file to Azure Blob Storage
+                        course.TeachingMaterialImagePath = await teachingMaterialBlobStorageService.UploadAsync(teachingMaterialImage, fileName);
                     }
                     catch (Exception ex)
                     {
@@ -137,7 +129,7 @@ namespace ContosoUniversity.Controllers
         // POST: Courses/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind("CourseID,Title,Credits,DepartmentID,TeachingMaterialImagePath")] Course course, IFormFile teachingMaterialImage)
+        public async Task<ActionResult> Edit([Bind("CourseID,Title,Credits,DepartmentID,TeachingMaterialImagePath")] Course course, IFormFile teachingMaterialImage)
         {
             if (ModelState.IsValid)
             {
@@ -165,33 +157,17 @@ namespace ContosoUniversity.Controllers
 
                     try
                     {
-                        // Create uploads directory if it doesn't exist
-                        var uploadsPath = MapAppPath("~/Uploads/TeachingMaterials/");
-                        if (!Directory.Exists(uploadsPath))
-                        {
-                            Directory.CreateDirectory(uploadsPath);
-                        }
-
                         // Generate unique filename
                         var fileName = $"course_{course.CourseID}_{Guid.NewGuid()}{fileExtension}";
-                        var filePath = Path.Combine(uploadsPath, fileName);
 
-                        // Delete old file if exists
+                        // Delete old blob if exists
                         if (!string.IsNullOrEmpty(course.TeachingMaterialImagePath))
                         {
-                            var oldFilePath = MapAppPath(course.TeachingMaterialImagePath);
-                            if (System.IO.File.Exists(oldFilePath))
-                            {
-                                System.IO.File.Delete(oldFilePath);
-                            }
+                            await teachingMaterialBlobStorageService.DeleteIfExistsAsync(course.TeachingMaterialImagePath);
                         }
 
-                        // Save new file
-                        using (var stream = System.IO.File.Create(filePath))
-                        {
-                            teachingMaterialImage.CopyTo(stream);
-                        }
-                        course.TeachingMaterialImagePath = $"~/Uploads/TeachingMaterials/{fileName}";
+                        // Save new file to Azure Blob Storage
+                        course.TeachingMaterialImagePath = await teachingMaterialBlobStorageService.UploadAsync(teachingMaterialImage, fileName);
                     }
                     catch (Exception ex)
                     {
@@ -231,27 +207,23 @@ namespace ContosoUniversity.Controllers
         // POST: Courses/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
-        public ActionResult DeleteConfirmed(int id)
+        public async Task<ActionResult> DeleteConfirmed(int id)
         {
             Course course = db.Courses.Find(id);
             var courseTitle = course.Title;
             
-            // Delete associated image file if it exists
+            // Delete associated image blob if it exists
             if (!string.IsNullOrEmpty(course.TeachingMaterialImagePath))
             {
-                var filePath = MapAppPath(course.TeachingMaterialImagePath);
-                if (System.IO.File.Exists(filePath))
+                try
                 {
-                    try
-                    {
-                        System.IO.File.Delete(filePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log the error but don't prevent deletion of the course
-                        // In a production application, you would log this error properly
-                        System.Diagnostics.Debug.WriteLine($"Error deleting file: {ex.Message}");
-                    }
+                    await teachingMaterialBlobStorageService.DeleteIfExistsAsync(course.TeachingMaterialImagePath);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't prevent deletion of the course
+                    // In a production application, you would log this error properly
+                    System.Diagnostics.Debug.WriteLine($"Error deleting blob: {ex.Message}");
                 }
             }
             
@@ -262,6 +234,22 @@ namespace ContosoUniversity.Controllers
             SendEntityNotification("Course", id.ToString(), courseTitle, EntityOperation.DELETE);
             
             return RedirectToAction("Index");
+        }
+
+        public async Task<ActionResult> TeachingMaterial(string blobName)
+        {
+            if (string.IsNullOrWhiteSpace(blobName))
+            {
+                return NotFound();
+            }
+
+            var teachingMaterial = await teachingMaterialBlobStorageService.DownloadAsync(blobName);
+            if (teachingMaterial == null)
+            {
+                return NotFound();
+            }
+
+            return File(teachingMaterial.Content, teachingMaterial.ContentType);
         }
 
         protected override void Dispose(bool disposing)
