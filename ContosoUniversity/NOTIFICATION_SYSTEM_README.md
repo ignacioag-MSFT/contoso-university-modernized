@@ -1,10 +1,10 @@
 # Real-Time Admin Notification System
 
-This project now includes a real-time notification system that alerts administrators whenever entity operations (create, update, delete) are performed in the system.
+This project includes a real-time notification system that alerts administrators whenever entity operations (create, update, delete) are performed in the system.
 
 ## Overview
 
-The notification system uses **Microsoft Message Queuing (MSMQ)** as the underlying technology to provide reliable, real-time notifications to administrators.
+The notification system uses **Azure Service Bus** as the messaging technology for reliable notifications to administrators. The application authenticates to Service Bus with `DefaultAzureCredential`, which supports managed identity in Azure-hosted environments.
 
 ## Features
 
@@ -13,13 +13,13 @@ The notification system uses **Microsoft Message Queuing (MSMQ)** as the underly
 - **Operation tracking**: Tracks CREATE, UPDATE, and DELETE operations
 - **Admin-only**: Only users with administrator role receive notifications
 - **Non-intrusive UI**: Notifications appear in the top-right corner with auto-dismiss
-- **Reliable delivery**: Uses MSMQ for guaranteed message delivery
+- **Reliable delivery**: Uses Azure Service Bus peek-lock receive and explicit message completion
 
 ## How It Works
 
 ### Backend Components
 
-1. **NotificationService**: Handles MSMQ operations for sending/receiving messages
+1. **NotificationService**: Sends and receives JSON notification messages through Azure Service Bus
 2. **BaseController**: Base class that all controllers inherit from to send notifications
 3. **Notification Model**: Entity to represent notification data
 4. **NotificationsController**: API endpoints for retrieving notifications
@@ -32,28 +32,39 @@ The notification system uses **Microsoft Message Queuing (MSMQ)** as the underly
 
 ### Technology Stack
 
-- **Microsoft Message Queuing (MSMQ)**: Message queue technology
+- **Azure Service Bus**: Managed cloud messaging service
+- **Azure Identity**: Managed identity authentication
 - **Entity Framework**: Data access for notification persistence
-- **ASP.NET MVC**: Web framework
+- **ASP.NET Core MVC**: Web framework
 - **JavaScript/jQuery**: Frontend polling and UI updates
 - **Bootstrap**: UI styling
 
 ## Configuration
 
-The notification system is configured in `Web.config`:
+The notification system is configured in `appsettings.json` or environment variables:
 
-```xml
-<appSettings>
-    <add key="NotificationQueuePath" value=".\Private$\ContosoUniversityNotifications"/>
-</appSettings>
+```json
+{
+  "AzureServiceBus": {
+    "FullyQualifiedNamespace": "<namespace>.servicebus.windows.net",
+    "NotificationQueueName": "contoso-university-notifications"
+  }
+}
 ```
+
+In Azure, prefer app settings such as:
+
+- `AzureServiceBus__FullyQualifiedNamespace=<namespace>.servicebus.windows.net`
+- `AzureServiceBus__NotificationQueueName=contoso-university-notifications`
+
+Grant the application's managed identity data-plane permissions for the queue, such as Azure Service Bus Data Sender and Azure Service Bus Data Receiver.
 
 ## Queue Details
 
-- **Queue Path**: `.\Private$\ContosoUniversityNotifications`
-- **Queue Type**: Private queue, auto-created if not exists
-- **Permissions**: Full control for "Everyone" (suitable for development)
+- **Queue Name**: `contoso-university-notifications`
+- **Authentication**: Managed identity through `DefaultAzureCredential`
 - **Message Format**: JSON serialized notification objects
+- **Message Metadata**: Queue messages use JSON content type and do not require a routing subject
 
 ## Usage
 
@@ -74,7 +85,6 @@ To add notification support to a new controller:
 3. Call `SendEntityNotification()` after successful save operations:
 
 ```csharp
-// Example: After creating a student
 db.Students.Add(student);
 db.SaveChanges();
 SendEntityNotification("Student", student.ID.ToString(), EntityOperation.CREATE);
@@ -83,15 +93,15 @@ SendEntityNotification("Student", student.ID.ToString(), EntityOperation.CREATE)
 ## Notification Types
 
 - **CREATE**: Green notification for entity creation
-- **UPDATE**: Blue notification for entity updates  
+- **UPDATE**: Blue notification for entity updates
 - **DELETE**: Orange notification for entity deletion
 
 ## System Requirements
 
-- Windows operating system (for MSMQ)
-- MSMQ feature enabled (Windows Features → Message Queuing)
-- .NET Framework 4.8
-- SQL Server (for Entity Framework)
+- .NET SDK matching the project target framework
+- SQL Server LocalDB or configured SQL Server
+- Azure Service Bus namespace and queue for deployed environments
+- Managed identity or developer credential with queue send/receive permissions
 
 ## Testing the System
 
@@ -104,32 +114,20 @@ SendEntityNotification("Student", student.ID.ToString(), EntityOperation.CREATE)
 
 ### Common Issues
 
-1. **MSMQ not installed**: Enable "Message Queuing" in Windows Features
-2. **Queue permissions**: Ensure the application pool identity has access to create private queues
-3. **No notifications appearing**: Check browser console for JavaScript errors
-4. **Queue not created**: Verify the application has permissions to create private queues
+1. **No notifications appearing**: Check browser console and `/Notifications/GetNotifications` network calls
+2. **Service Bus authentication fails**: Verify managed identity is enabled and has send/receive permissions
+3. **Queue not found**: Verify the configured queue exists in the configured namespace
+4. **Local development credentials**: Sign in with a credential supported by `DefaultAzureCredential`, such as Azure CLI or Visual Studio
 
 ### Development Notes
 
-- Notifications are sent asynchronously and won't block main operations if MSMQ fails
-- Failed notification sends are logged to debug output but don't affect user operations
+- Notification failures are logged to debug output but do not affect user operations
 - JavaScript polling occurs every 5 seconds
 - Maximum of 5 notifications are displayed simultaneously
 
 ## Architecture Benefits
 
-- **Decoupled**: MSMQ ensures notifications don't affect main application performance
-- **Reliable**: Messages persist even if the web application restarts
-- **Scalable**: Can easily extend to support multiple administrators
+- **Decoupled**: Service Bus messaging keeps notification delivery independent from CRUD operations
+- **Reliable**: Messages remain locked until completed and can be retried if processing fails
+- **Scalable**: Can extend to multiple processors or administrator notification channels
 - **Maintainable**: Clear separation between notification logic and business logic
-
-## Future Enhancements
-
-Potential improvements for production use:
-
-1. **SignalR integration**: Real-time push notifications instead of polling
-2. **Email notifications**: Send email alerts for critical operations
-3. **Notification persistence**: Store notifications in database for audit trail
-4. **User preferences**: Allow admins to configure notification types
-5. **Batch operations**: Group related notifications to reduce noise
-6. **Advanced filtering**: Filter notifications by entity type or operation
