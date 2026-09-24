@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+.git/
+.github
+.gitignore
+.vs/
+.vscode/
+Infra2/
+*.user
+*.suo
+README.md

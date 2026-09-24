@@ -17,4 +17,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Content\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Scripts\**\*" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
